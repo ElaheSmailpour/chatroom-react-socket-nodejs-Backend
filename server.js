@@ -57,6 +57,16 @@ mySocket.on("connection", (socket) => {
     })
     mySocket.emit("newMessage", { ...message, date: new Date(), id: Math.floor(Math.random() * Math.pow(10, 7)) });
   });
+  socket.on("joinChat", (username, myUsername) => {
+
+    socket.join(`${username}:${myUsername}`)
+    socket.join(`${myUsername}:${username}`)
+  });
+  socket.on("leftChat", (username, myUsername) => {
+
+    socket.leave(`${username}:${myUsername}`)
+    socket.leave(`${myUsername}:${username}`)
+  });
   socket.on("deleteMsg", (id) => {
     console.log(id);
     mySocket.emit("deleteMsg", id);
