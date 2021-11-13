@@ -36,7 +36,10 @@ app.post("/login", async (req, res) => {
   await newUser.save();
   res.status(200).send({});
 })
-
+app.get("/getUsers", async (req, res) => {
+  const users = await User.find({})
+  res.send(users)
+})
 const server = app.listen(3010, (err) => {
   console.log("App Listen to port 3010");
 });
