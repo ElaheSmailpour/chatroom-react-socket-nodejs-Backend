@@ -3,6 +3,7 @@ const express = require("express");
 const io = require("socket.io");
 const User = require("./model/user")
 const Message = require("./model/message")
+const { uploadVoice, uploadFile } = require('./middleware/upload');
 const cors = require("./middleware/cors")
 var path = require('path');
 const app = express();
@@ -40,6 +41,24 @@ app.get("/getUsers", async (req, res) => {
   const users = await User.find({})
   res.send(users)
 })
+
+const upVoice = uploadVoice.fields([{ name: 'voiceMessage', maxCount: 1 }]);
+const upFiles = uploadFile.fields([{ name: 'file', maxCount: 1 }]);
+
+app.post('/uploadVoice', upVoice, async (req, res) => {
+  if (req.files) {
+    const filePath =
+      `http://localhost:3010/` +
+      req.files.voiceMessage[0].path.slice(7).replace(/\\/g, '/');
+    await res.json({
+      filePath: filePath,
+    });
+  } else {
+    res.status(400).json({
+      success: false,
+    });
+  }
+});
 const server = app.listen(3010, (err) => {
   console.log("App Listen to port 3010");
 });
@@ -51,18 +70,40 @@ mySocket.on("connection", (socket) => {
   console.log("new User Connected");
 
   socket.on("newMessage", async (message) => {
+
+    console.log("message=", message);
+
+    const myUsername = message.sender.name;
+    const username = message.receiver.name;
+    mySocket.to(`${myUsername}:${username}`).to(`${username}:${myUsername}`).emit("newMessage", {
+      ...message,
+      date: new Date(),
+      id: Math.floor(Math.random() * Math.pow(10, 7))
+    })
+  })
+  /*
+  socket.on("newMessage", async (message) => {
     console.log(message.msg);
     await Message.create({
       message: message.msg
     })
     mySocket.emit("newMessage", { ...message, date: new Date(), id: Math.floor(Math.random() * Math.pow(10, 7)) });
   });
-  socket.on("joinChat", (username, myUsername) => {
-
+*/
+  socket.on('editMessage', ({ msg, id, sender, receiver }) => {
+    const myUsername = sender;
+    const username = receiver;
+    mySocket
+      .to(`${myUsername}:${username}`)
+      .to(`${username}:${myUsername}`)
+      .emit('editMessage', { msg, id });
+  });
+  socket.on("joinChat", ({ username, myUsername }) => {
+    console.log("join=", username, myUsername)
     socket.join(`${username}:${myUsername}`)
     socket.join(`${myUsername}:${username}`)
   });
-  socket.on("leftChat", (username, myUsername) => {
+  socket.on("leftChat", ({ username, myUsername }) => {
 
     socket.leave(`${username}:${myUsername}`)
     socket.leave(`${myUsername}:${username}`)
