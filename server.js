@@ -3,10 +3,12 @@ const express = require("express");
 const io = require("socket.io");
 const User = require("./model/user")
 const Message = require("./model/message")
+
 const { uploadVoice, uploadFile } = require('./middleware/upload');
 const cors = require("./middleware/cors")
 var path = require('path');
 const app = express();
+
 const verbindeDB = require("./mongo-db");
 verbindeDB()
 app.use(express.json());
@@ -22,6 +24,25 @@ app.get("/", (req, res) => {
 });
 app.get("/salam", (req, res) => {
   res.send("salam . I am alive");
+});
+
+
+const upVoice = uploadVoice.fields([{ name: 'voiceMessage', maxCount: 1 }]);
+
+
+app.post('/uploadVoice', upVoice, async (req, res) => {
+  if (req.files) {
+    const filePath =
+      `http://localhost:3010/` +
+      req.files.voiceMessage[0].path.slice(7).replace(/\\/g, '/');
+    await res.json({
+      filePath: filePath,
+    });
+  } else {
+    res.status(400).json({
+      success: false,
+    });
+  }
 });
 app.post("/login", async (req, res) => {
   const username = req.body.username;
@@ -42,23 +63,7 @@ app.get("/getUsers", async (req, res) => {
   res.send(users)
 })
 
-const upVoice = uploadVoice.fields([{ name: 'voiceMessage', maxCount: 1 }]);
-const upFiles = uploadFile.fields([{ name: 'file', maxCount: 1 }]);
 
-app.post('/uploadVoice', upVoice, async (req, res) => {
-  if (req.files) {
-    const filePath =
-      `http://localhost:3010/` +
-      req.files.voiceMessage[0].path.slice(7).replace(/\\/g, '/');
-    await res.json({
-      filePath: filePath,
-    });
-  } else {
-    res.status(400).json({
-      success: false,
-    });
-  }
-});
 const server = app.listen(3010, (err) => {
   console.log("App Listen to port 3010");
 });
@@ -111,6 +116,21 @@ mySocket.on("connection", (socket) => {
   socket.on("deleteMsg", (id) => {
     console.log(id);
     mySocket.emit("deleteMsg", id);
+  });
+  socket.on('uploadVoice', ({ path, sender, receiver }) => {
+    const myUsername = sender.name;
+    const username = receiver.name;
+    mySocket
+      .to(`${myUsername}:${username}`)
+      .to(`${username}:${myUsername}`)
+      .emit('newMessage', {
+        type: 'voice',
+        sender,
+        receiver,
+        date: new Date(),
+        path,
+        id: Math.floor(Math.random() * Math.pow(10, 7)),
+      });
   });
 
   socket.on("disconnect", () => {
