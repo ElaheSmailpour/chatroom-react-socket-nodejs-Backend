@@ -28,6 +28,7 @@ app.get("/salam", (req, res) => {
 
 
 const upVoice = uploadVoice.fields([{ name: 'voiceMessage', maxCount: 1 }]);
+const upFiles = uploadFile.fields([{ name: 'file', maxCount: 1 }]);
 
 
 app.post('/uploadVoice', upVoice, async (req, res) => {
@@ -35,6 +36,20 @@ app.post('/uploadVoice', upVoice, async (req, res) => {
     const filePath =
       `http://localhost:3010/` +
       req.files.voiceMessage[0].path.slice(7).replace(/\\/g, '/');
+    await res.json({
+      filePath: filePath,
+    });
+  } else {
+    res.status(400).json({
+      success: false,
+    });
+  }
+});
+app.post('/uploadFile', upFiles, async (req, res) => {
+  if (req.files) {
+    const filePath =
+      `http://localhost:3010/` +
+      req.files.file[0].path.slice(7).replace(/\\/g, '/');
     await res.json({
       filePath: filePath,
     });
@@ -125,6 +140,21 @@ mySocket.on("connection", (socket) => {
       .to(`${username}:${myUsername}`)
       .emit('newMessage', {
         type: 'voice',
+        sender,
+        receiver,
+        date: new Date(),
+        path,
+        id: Math.floor(Math.random() * Math.pow(10, 7)),
+      });
+  });
+  socket.on('uploadFile', ({ path, sender, receiver }) => {
+    const myUsername = sender.name;
+    const username = receiver.name;
+    mySocket
+      .to(`${myUsername}:${username}`)
+      .to(`${username}:${myUsername}`)
+      .emit('newMessage', {
+        type: 'file',
         sender,
         receiver,
         date: new Date(),
