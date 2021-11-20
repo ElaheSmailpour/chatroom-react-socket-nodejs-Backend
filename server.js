@@ -132,6 +132,14 @@ mySocket.on("connection", (socket) => {
     console.log(id);
     mySocket.emit("deleteMsg", id);
   });
+  socket.on('isTyping', ({ sender, receiver, isTyping }) => {
+    const myUsername = receiver;
+    const username = sender;
+    mySocket
+      .to(`${myUsername}:${username}`)
+      .to(`${username}:${myUsername}`)
+      .emit('isTyping', { username, isTyping });
+  });
   socket.on('uploadVoice', ({ path, sender, receiver }) => {
     const myUsername = sender.name;
     const username = receiver.name;
