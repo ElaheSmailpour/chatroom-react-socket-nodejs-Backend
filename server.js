@@ -140,6 +140,15 @@ mySocket.on("connection", (socket) => {
       .to(`${username}:${myUsername}`)
       .emit('isTyping', { username, isTyping });
   });
+  socket.on('seenMessage', ({ sender, receiver, id }) => {
+    console.log('seenMessage ', sender, receiver);
+    const myUsername = receiver;
+    const username = sender;
+    mySocket
+      .to(`${myUsername}:${username}`)
+      .to(`${username}:${myUsername}`)
+      .emit('seenMessage', id);
+  });
   socket.on('uploadVoice', ({ path, sender, receiver }) => {
     const myUsername = sender.name;
     const username = receiver.name;
