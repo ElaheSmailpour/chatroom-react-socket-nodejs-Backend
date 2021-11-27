@@ -78,6 +78,10 @@ app.get("/getUsers", async (req, res) => {
   res.send(users)
 })
 
+app.get("/getMessages/:sender/:receiver", async (req, res) => {
+  const msg = await Message.find({$or: [{sender:req.params.sender,receiver:req.params.receiver},{sender:req.params.receiver,receiver:req.params.sender}] })
+  res.send(msg)
+})
 
 const server = app.listen(3010, (err) => {
   console.log("App Listen to port 3010");
@@ -95,11 +99,13 @@ mySocket.on("connection", (socket) => {
 
     const myUsername = message.sender.name;
     const username = message.receiver.name;
+  
     mySocket.to(`${myUsername}:${username}`).to(`${username}:${myUsername}`).emit("newMessage", {
       ...message,
       date: new Date(),
       id: Math.floor(Math.random() * Math.pow(10, 7))
     })
+    await  Message.create({message:message.msg,sender:message.sender.name,receiver:message.receiver.name,gender:message.sender.gender})
   })
   /*
   socket.on("newMessage", async (message) => {
@@ -124,14 +130,24 @@ mySocket.on("connection", (socket) => {
     socket.join(`${myUsername}:${username}`)
   });
   socket.on("leftChat", ({ username, myUsername }) => {
-
+    mySocket
+    .to(`${myUsername}:${username}`)
+    .to(`${username}:${myUsername}`)
+    .emit("leftChat",myUsername);
+   
     socket.leave(`${username}:${myUsername}`)
     socket.leave(`${myUsername}:${username}`)
+   
   });
   socket.on("deleteMsg", (id) => {
     console.log(id);
     mySocket.emit("deleteMsg", id);
   });
+
+  socket.on("isTyping",({sender,receiver,isTyping})=>{
+    mySocket.to(`${sender}:${receiver}`).to(`${receiver}:${sender}`).emit("isTyping",{username:sender,isTyping})
+  })
+  /*
   socket.on('isTyping', ({ sender, receiver, isTyping }) => {
     const myUsername = receiver;
     const username = sender;
@@ -140,6 +156,7 @@ mySocket.on("connection", (socket) => {
       .to(`${username}:${myUsername}`)
       .emit('isTyping', { username, isTyping });
   });
+  */
   socket.on('seenMessage', ({ sender, receiver, id }) => {
     console.log('seenMessage ', sender, receiver);
     const myUsername = receiver;
@@ -184,7 +201,3 @@ mySocket.on("connection", (socket) => {
     console.log("User disconnected")
   })
 });
-
-
-
-//für run im terminal : node server.js
